@@ -105,9 +105,6 @@ app.post('/api/chat/send', verifyToken, (req, res) => {
   
   res.json({ ok: true, message });
 });
-  
-  res.json({ ok: true, message });
-});
 
 app.get('/api/chat/messages', (req, res) => {
   const messages = readJSON(MESSAGES_FILE);
