@@ -16,6 +16,16 @@ if (!fs.existsSync(MESSAGES_FILE)) fs.writeFileSync(MESSAGES_FILE, JSON.stringif
 const readJSON = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const writeJSON = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
 
+const sanitize = (str) => {
+  return str
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim();
+};
+
 app.use(express.json());
 app.use(express.static(ROOT, { index: false }));
 
@@ -30,20 +40,22 @@ app.post('/api/chat/register', (req, res) => {
     return res.status(400).json({ error: 'Username musí mít 2-20 znaků' });
   }
   
+  const sanitizedUsername = sanitize(username);
+  
   const users = readJSON(USERS_FILE);
-  const exists = users.find(u => u.username === username);
+  const exists = users.find(u => u.username === sanitizedUsername);
   
   if (exists) {
     return res.status(409).json({ error: 'Username je již zabraný' });
   }
 
-  const user = { username, createdAt: new Date().toISOString() };
+  const user = { username: sanitizedUsername, createdAt: new Date().toISOString() };
   users.push(user);
   writeJSON(USERS_FILE, users);
   
-  const token = jwt.sign({ username }, SECRET);
+  const token = jwt.sign({ username: sanitizedUsername }, SECRET);
   
-  res.json({ token, username });
+  res.json({ token, username: sanitizedUsername });
 });
 
 const verifyToken = (req, res, next) => {
@@ -76,11 +88,13 @@ app.post('/api/chat/send', verifyToken, (req, res) => {
     return res.status(400).json({ error: 'Message must be 1-500 chars' });
   }
   
+  const sanitizedText = sanitize(text);
+  
   const messages = readJSON(MESSAGES_FILE);
   const message = {
     id: Date.now(),
     username: req.user.username,
-    text,
+    text: sanitizedText,
     timestamp: new Date().toISOString()
   };
   
