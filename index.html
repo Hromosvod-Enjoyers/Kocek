@@ -568,104 +568,81 @@
             autoStuff();
             for(let i=0; i<5; i++) setTimeout(spawnCat, i*300);
             setInterval(spawnCat, 2500);
-            initChat();
+            initChat().catch(e => console.error('Chat init error:', e));
         }
 
-        /* --- E2E ENCRYPTION SETUP (RSA) --- */
-        let keyPair = null;
-        let usersPublicKeys = {}; // { username: publicKey }
+        /* --- E2E ENCRYPTION SETUP (AES-256-GCM GROUP CHAT) --- */
+        let chatEncryptionKey = null;
 
-        // Generate RSA key pair
-        async function generateKeyPair() {
-            try {
-                keyPair = await window.crypto.subtle.generateKey(
-                    {
-                        name: "RSA-OAEP",
-                        modulusLength: 2048,
-                        publicExponent: new Uint8Array([1, 0, 1]),
-                        hash: "SHA-256",
-                    },
-                    true,
-                    ["encrypt", "decrypt"]
-                );
-                return keyPair;
-            } catch (e) {
-                console.error('Key generation failed:', e);
-                alert('Nepodařilo se vygenerovat šifrovací klíče!');
-                return null;
-            }
-        }
-
-        // Export public key to base64
-        async function exportPublicKey(publicKey) {
-            const exported = await window.crypto.subtle.exportKey('spki', publicKey);
-            const exportedAsBase64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
-            return exportedAsBase64;
-        }
-
-        // Import public key from base64
-        async function importPublicKey(base64Key) {
-            try {
-                const binaryString = atob(base64Key);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                return await window.crypto.subtle.importKey(
-                    'spki',
-                    bytes.buffer,
-                    { name: "RSA-OAEP", hash: "SHA-256" },
-                    true,
-                    ["encrypt"]
-                );
-            } catch (e) {
-                console.error('Failed to import public key:', e);
-                return null;
-            }
-        }
-
-        // Encrypt message for specific users
-        async function encryptMessageForUsers(text, targetUsernames) {
-            if (!keyPair) return null;
+        // Derive shared encryption key for group chat
+        async function deriveChatKey() {
+            const baseKey = await window.crypto.subtle.importKey(
+                'raw',
+                new TextEncoder().encode('hromosvody-e2e-group-chat-secret-2026'),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveBits']
+            );
             
-            try {
-                const encoded = new TextEncoder().encode(text);
-                const encrypted = {};
-                
-                // Encrypt for each target user
-                for (const username of targetUsernames) {
-                    if (usersPublicKeys[username]) {
-                        const encryptedData = await window.crypto.subtle.encrypt(
-                            { name: "RSA-OAEP" },
-                            usersPublicKeys[username],
-                            encoded
-                        );
-                        encrypted[username] = btoa(String.fromCharCode(...new Uint8Array(encryptedData)));
-                    }
-                }
-                
-                return encrypted;
-            } catch (e) {
-                console.error('Encryption failed:', e);
-                return null;
-            }
+            const derivedBits = await window.crypto.subtle.deriveBits(
+                {
+                    name: 'PBKDF2',
+                    hash: 'SHA-256',
+                    salt: new TextEncoder().encode('hromosvody-group-chat'),
+                    iterations: 100000
+                },
+                baseKey,
+                256
+            );
+            
+            return await window.crypto.subtle.importKey(
+                'raw',
+                derivedBits,
+                { name: 'AES-GCM' },
+                false,
+                ['encrypt', 'decrypt']
+            );
         }
 
-        // Decrypt message with private key
+        // Encrypt message with AES-256-GCM
+        async function encryptMessage(text) {
+            if (!chatEncryptionKey) return null;
+            
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const encoded = new TextEncoder().encode(text);
+            
+            const encrypted = await window.crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv: iv },
+                chatEncryptionKey,
+                encoded
+            );
+            
+            // Combine IV + encrypted data
+            const combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv);
+            combined.set(new Uint8Array(encrypted), iv.length);
+            
+            return btoa(String.fromCharCode(...combined));
+        }
+
+        // Decrypt message with AES-256-GCM
         async function decryptMessage(encryptedBase64) {
-            if (!keyPair) return '[Nemáš klíč]';
+            if (!chatEncryptionKey) return '[Nemáš klíč]';
             
             try {
-                const binaryString = atob(encryptedBase64);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
+                const data = atob(encryptedBase64);
+                const bytes = new Uint8Array(data.length);
+                for (let i = 0; i < data.length; i++) {
+                    bytes[i] = data.charCodeAt(i);
                 }
+                
+                const iv = bytes.slice(0, 12);
+                const encrypted = bytes.slice(12);
                 
                 const decrypted = await window.crypto.subtle.decrypt(
-                    { name: "RSA-OAEP" },
-                    keyPair.privateKey,
-                    bytes.buffer
+                    { name: 'AES-GCM', iv: iv },
+                    chatEncryptionKey,
+                    encrypted
                 );
                 
                 return new TextDecoder().decode(decrypted);
@@ -675,66 +652,9 @@
             }
         }
 
-        // Store keys in localStorage
-        async function storeKeyPair() {
-            const publicKey = await exportPublicKey(keyPair.publicKey);
-            const privateKey = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-            const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKey)));
-            
-            localStorage.setItem('chat_public_key', publicKey);
-            localStorage.setItem('chat_private_key', privateKeyBase64);
-            return publicKey;
-        }
-
-        // Load keys from localStorage
-        async function loadKeyPair() {
-            const publicKeyBase64 = localStorage.getItem('chat_public_key');
-            const privateKeyBase64 = localStorage.getItem('chat_private_key');
-            
-            if (!publicKeyBase64 || !privateKeyBase64) return false;
-            
-            try {
-                const publicKey = await importPublicKey(publicKeyBase64);
-                
-                const binaryString = atob(privateKeyBase64);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                const privateKey = await window.crypto.subtle.importKey(
-                    'pkcs8',
-                    bytes.buffer,
-                    { name: "RSA-OAEP", hash: "SHA-256" },
-                    true,
-                    ["decrypt"]
-                );
-                
-                keyPair = { publicKey, privateKey };
-                return true;
-            } catch (e) {
-                console.error('Failed to load keys:', e);
-                return false;
-            }
-        }
-
-        // Load all users' public keys
-        async function loadUsersPublicKeys() {
-            try {
-                const response = await fetch('/api/chat/users');
-                const users = await response.json();
-                usersPublicKeys = {};
-                for (const user of users) {
-                    if (user.publicKey) {
-                        const imported = await importPublicKey(user.publicKey);
-                        if (imported) {
-                            usersPublicKeys[user.username] = imported;
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to load users public keys:', e);
-            }
+        // Initialize encryption key on startup
+        async function initializeEncryption() {
+            chatEncryptionKey = await deriveChatKey();
         }
 
         /* --- REAL CHAT LOGIC --- */
@@ -749,29 +669,18 @@
                 if (lastServerStartTime && lastServerStartTime !== String(session.startTime)) {
                     localStorage.removeItem('chat_token');
                     localStorage.removeItem('chat_username');
-                    localStorage.removeItem('chat_public_key');
-                    localStorage.removeItem('chat_private_key');
                     chatToken = null;
                     chatUsername = null;
-                    keyPair = null;
                 }
                 localStorage.setItem('server_start_time', session.startTime);
                 
+                // Initialize encryption
+                await initializeEncryption();
+                
                 if (chatToken && chatUsername) {
-                    const keysLoaded = await loadKeyPair();
-                    if (keysLoaded) {
-                        await loadUsersPublicKeys();
-                        showChatLoggedIn();
-                        loadChatMessages();
-                        setInterval(loadChatMessages, 2000);
-                        setInterval(loadUsersPublicKeys, 5000);
-                    } else {
-                        localStorage.removeItem('chat_token');
-                        localStorage.removeItem('chat_username');
-                        chatToken = null;
-                        chatUsername = null;
-                        showChatLogin();
-                    }
+                    showChatLoggedIn();
+                    loadChatMessages();
+                    setInterval(loadChatMessages, 2000);
                 } else {
                     showChatLogin();
                 }
@@ -799,17 +708,11 @@
             const username = document.getElementById('username-input').value.trim();
             if (!username) { alert('Username nemůže být prázdný!'); return; }
 
-            // Generate RSA key pair
-            await generateKeyPair();
-            if (!keyPair) return;
-            
-            const publicKey = await storeKeyPair();
-
             try {
                 const response = await fetch('/api/chat/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, publicKey })
+                    body: JSON.stringify({ username })
                 });
                 const data = await response.json();
                 
@@ -823,11 +726,9 @@
                 chatToken = data.token;
                 chatUsername = data.username;
                 
-                await loadUsersPublicKeys();
                 showChatLoggedIn();
                 loadChatMessages();
                 setInterval(loadChatMessages, 2000);
-                setInterval(loadUsersPublicKeys, 5000);
             } catch (e) {
                 alert('Chyba: ' + e);
             }
@@ -845,17 +746,21 @@
                     msgDiv.className = 'chat-message';
                     const userSpan = document.createElement('span');
                     userSpan.className = 'chat-message-user';
-                    userSpan.textContent = m.username;
+                    userSpan.textContent = m.username + ': ';
                     msgDiv.appendChild(userSpan);
                     
-                    // Decrypt message
-                    let text = '[Načítání...]';
-                    if (m.encryptedText && keyPair) {
-                        text = await decryptMessage(m.encryptedText);
-                    }
-                    
-                    msgDiv.appendChild(document.createTextNode(': ' + text));
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = '[Načítání...]';
+                    msgDiv.appendChild(textSpan);
                     box.appendChild(msgDiv);
+                    
+                    // Decrypt message
+                    if (m.encryptedText) {
+                        const text = await decryptMessage(m.encryptedText);
+                        textSpan.textContent = text;
+                    } else {
+                        textSpan.textContent = '[Bez šifrování]';
+                    }
                 }
                 
                 box.scrollTop = box.scrollHeight;
@@ -866,23 +771,10 @@
 
         async function sendChatMessage() {
             const text = document.getElementById('chat-msg-input').value.trim();
-            if (!text || !chatToken || !keyPair) return;
+            if (!text || !chatToken) return;
 
             try {
-                // Get all other users
-                const otherUsers = Object.keys(usersPublicKeys).filter(u => u !== chatUsername);
-                
-                if (otherUsers.length === 0) {
-                    alert('Žádní další uživatelé v chatu!');
-                    return;
-                }
-                
-                // Encrypt for all users
-                const encryptedData = await encryptMessageForUsers(text, otherUsers);
-                if (!encryptedData) {
-                    alert('Chyba při šifrování!');
-                    return;
-                }
+                const encryptedText = await encryptMessage(text);
 
                 const response = await fetch('/api/chat/send', {
                     method: 'POST',
@@ -890,7 +782,7 @@
                         'Content-Type': 'application/json', 
                         'Authorization': `Bearer ${chatToken}` 
                     },
-                    body: JSON.stringify({ encryptedData: JSON.stringify(encryptedData) })
+                    body: JSON.stringify({ encryptedText })
                 });
                 
                 const result = await response.json();
