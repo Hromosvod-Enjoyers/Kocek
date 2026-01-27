@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Allow: /index.html
+Disallow: 
+
+Sitemap: https://hromosvody.club/sitemap.xml
+
+# Specifické instrukce pro různé boty
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# Zpoždění pro agresivní crawlery
+User-agent: *
+Crawl-delay: 1

@@ -2,7 +2,48 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>⚡ 384.cz - TOTAL TRASH EDITION ⚡</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <title>⚡ hromosvody.club - TOTAL TRASH EDITION ⚡ | Interaktivní Chaos, Kočky a Zábava</title>
+    <meta name="description" content="hromosvody.club TOTAL TRASH EDITION - Interaktivní webová stránka plná chaosu, padajících koček, hackerských her a absurdního humoru. Tahej kočky, hraj si s fyzikou a bavte se!">
+    <meta name="keywords" content="hromosvody, chaos, kočky, interaktivní hra, zábava, fyzika, hackerská hra, fyzické objekty, absurdní web">
+    <meta name="author" content="hromosvody.club">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Czech">
+    <meta name="revisit-after" content="7 days">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://hromosvody.club">
+    <meta property="og:title" content="⚡ hromosvody.club - TOTAL TRASH EDITION ⚡">
+    <meta property="og:description" content="Interaktivní chaos - tahej kočky, hraj si s fyzikou a vzor zábavu. Fyzické objekty padají, kreslíš a seš součástí pekla.">
+    <meta property="og:locale" content="cs_CZ">
+    
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="⚡ hromosvody.club - TOTAL TRASH EDITION ⚡">
+    <meta name="twitter:description" content="Interaktivní webová stránka plná chaosu a padajících koček. Zahraj si, kresli a vymrzni!">
+    
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>⚡</text></svg>">
+    <link rel="shortcut icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>⚡</text></svg>">
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "hromosvody.club - TOTAL TRASH EDITION",
+      "description": "Interaktivní webová aplikace plná chaosu, padajících koček a absurdního humoru",
+      "url": "https://hromosvody.club",
+      "applicationCategory": "GameApplication",
+      "inLanguage": "cs-CZ",
+      "browserRequirements": "Requires JavaScript",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CZK"
+      }
+    }
+    </script>
+    
     <style>
 
         body {
@@ -83,85 +124,85 @@
         <span>DRŽ <b>CTRL</b> A KRESLETE!</span>
     </div>
 
-    <div id="content-layer">
+    <div id="content-layer" role="main" aria-label="Hlavní obsah aplikace">
         <br><br><br>
-        <header style="background: black; padding: 20px; border: 10px dashed gold; text-align: center; transform: rotate(-1deg);">
+        <header style="background: black; padding: 20px; border: 10px dashed gold; text-align: center; transform: rotate(-1deg);" role="banner">
             <h1 class="blink" style="font-size: 50px; color: magenta; text-shadow: 3px 3px lime;">⚡ 384.cz CHAOS ⚡</h1>
-            <marquee style="font-size: 30px; color: white; background: red; font-weight: bold;">
+            <marquee style="font-size: 30px; color: white; background: red; font-weight: bold;" aria-label="Uvítací zpráva">
                 VÍTEJTE V DIGITÁLNÍM SKLADIŠTI ⚡ KOČKY PROPADAJÍ DO PEKLA ⚡ KLIKNEŠ A NEVÍŠ ⚡
             </marquee>
         </header>
 
-        <div class="container">
+        <div class="container" role="region" aria-label="Interaktivní herní prvky">
             
-            <div class="frame pigborder">
+            <div class="frame pigborder" role="region" aria-label="Hra Celnice">
                 <h2>👮 CELNICE</h2>
                 <p>Máte něco k proclení?</p>
-                <button onclick="priznal()">ANO</button>
-                <button onclick="alert('POKUTA 384 KČ!'); priznal()">NE</button>
+                <button onclick="priznal()" aria-label="Přiznat, že máte něco k proclení">ANO</button>
+                <button onclick="alert('POKUTA 384 KČ!'); priznal()" aria-label="Popřít, že máte něco k proclení">NE</button>
             </div>
 
-            <div class="frame bluborder">
+            <div class="frame bluborder" role="region" aria-label="Kontrola prvočísel">
                 <h2>🔢 PRVOČÍSLA</h2>
-                <input type="number" id="cislo" placeholder="Zadej číslo...">
-                <button onclick="checkno()">ANALÝZA</button>
+                <input type="number" id="cislo" placeholder="Zadej číslo..." aria-label="Zadej číslo k analýze">
+                <button onclick="checkno()" aria-label="Analyzovat, zda je číslo prvočíslo">ANALÝZA</button>
             </div>
 
-            <div class="frame" style="height: 150px;">
+            <div class="frame" style="height: 150px;" role="region" aria-label="Past na roboty">
                 <h2>🤖 PAST NA ROBOTY</h2>
                 <p>Klikni, pokud jsi člověk:</p>
-                <button id="runaway-btn" onmouseover="moveBtn(this)">JSEM ČLOVĚK</button>
+                <button id="runaway-btn" onmouseover="moveBtn(this)" aria-label="Klikni, pokud jsi člověk">JSEM ČLOVĚK</button>
             </div>
 
-            <div class="frame" style="background: #100;">
+            <div class="frame" style="background: #100;" role="region" aria-label="Magický krb">
                 <h3>🔥 KRB</h3>
-                <textarea id="krb" rows="4">MAGICKÝ OHEŇ MĚNÍ PÍSMENA...</textarea>
-                <button onclick="toggleKrb()">PŘILOŽIT</button>
+                <textarea id="krb" rows="4" aria-label="Magický oheň - text se bude měnit">MAGICKÝ OHEŇ MĚNÍ PÍSMENA...</textarea>
+                <button onclick="toggleKrb()" aria-label="Zapnout nebo vypnout oheň">PŘILOŽIT</button>
             </div>
 
-            <div class="frame pigborder">
+            <div class="frame pigborder" role="region" aria-label="Rohlíkoměr - kalkulator">
                 <h2>🥐 ROHLÍKOMĚR</h2>
                 <p>Mzda vs Rohlík (3 Kč)</p>
-                <input id="money" type="number" placeholder="Tvoje výplata...">
-                <button onclick="calcRohlik()">SPOČÍTAT</button>
-                <h3 id="rohlik-res">0 ks</h3>
+                <input id="money" type="number" placeholder="Tvoje výplata..." aria-label="Zadej svou výplatu">
+                <button onclick="calcRohlik()" aria-label="Spočítat počet rohlíků">SPOČÍTAT</button>
+                <h3 id="rohlik-res" aria-live="polite">0 ks</h3>
             </div>
 
-            <div class="frame" style="background: black; border-color: lime;">
+            <div class="frame" style="background: black; border-color: lime;" role="region" aria-label="Hackerský terminál">
                 <h3>💻 HACKER ZONE</h3>
-                <div id="terminal" class="console-box">System booting...<br></div>
+                <div id="terminal" class="console-box" role="status" aria-live="polite" aria-label="Hackerský terminál - systémové zprávy">System booting...<br></div>
             </div>
 
-            <div class="frame bluborder">
+            <div class="frame bluborder" role="region" aria-label="Falešný chat">
                 <h3>💬 FAKE CHAT</h3>
-                <div id="chat" class="console-box" style="background: white; color: black;"></div>
+                <div id="chat" class="console-box" role="status" aria-live="polite" aria-label="Chat kanál - zprávy od uživatelů" style="background: white; color: black;"></div>
             </div>
 
-            <div class="frame" style="background: darkred;">
+            <div class="frame" style="background: darkred;" role="region" aria-label="Stažení viru">
                 <h2 class="blink">⚠️ VIRUS ZDARMA</h2>
-                <p>Stahování: <span id="virus-pct">0%</span></p>
+                <p>Stahování: <span id="virus-pct" aria-label="Procento stažení">0%</span></p>
                 <div style="width: 100%; background: black; height: 20px;">
-                    <div id="virus-bar" style="width: 0%; background: lime; height: 100%;"></div>
+                    <div id="virus-bar" style="width: 0%; background: lime; height: 100%;" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Indikátor stahování viru"></div>
                 </div>
-                <button onclick="startVirus()">STÁHNOUT</button>
+                <button onclick="startVirus()" aria-label="Začít stahování viru">STÁHNOUT</button>
             </div>
 
-            <div class="frame">
+            <div class="frame" role="region" aria-label="Cookies - svolení se všemi podmínkami">
                 <h2>🍪 COOKIES</h2>
                 <p>Souhlasíte se vším?</p>
-                <div id="cookie-area">
-                    <button onclick="cloneMe(this)">SOUHLASÍM</button>
+                <div id="cookie-area" role="group" aria-label="Tlačítka pro souhlas s cookies">
+                    <button onclick="cloneMe(this)" aria-label="Souhlas se všemi cookies">SOUHLASÍM</button>
                 </div>
             </div>
 
-            <div class="frame pigborder">
+            <div class="frame pigborder" role="region" aria-label="Phone Nuke - jaderná zbraň na mobil">
                 <h2>📱 PHONE NUKE</h2>
-                <button onclick="nuke()">ODPÁLIT MOBIL</button>
+                <button onclick="nuke()" aria-label="Odpálit jadernou bombu na telefon">ODPÁLIT MOBIL</button>
             </div>
 
-            <div style="width: 100%; text-align: center; color: white; background: black; padding: 20px;">
-                Tady je konec stránky. Kočky padají dál. <br> 384 FOREVER.
-            </div>
+            <footer style="width: 100%; text-align: center; color: white; background: black; padding: 20px;" role="contentinfo">
+                <p>Tady je konec stránky. Kočky padají dál. <br> 384 FOREVER.</p>
+            </footer>
         </div>
     </div>
 
