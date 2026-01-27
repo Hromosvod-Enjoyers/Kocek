@@ -653,15 +653,35 @@
         /* --- REAL CHAT --- */
         let chatToken = localStorage.getItem('chat_token');
         let chatUsername = localStorage.getItem('chat_username');
+        let lastServerStartTime = localStorage.getItem('server_start_time');
 
         function initChat() {
-            if (chatToken && chatUsername) {
-                showChatLoggedIn();
-                loadChatMessages();
-                setInterval(loadChatMessages, 2000);
-            } else {
+            // Check if server restarted
+            fetch('/api/chat/session')
+            .then(r => r.json())
+            .then(session => {
+                if (lastServerStartTime && lastServerStartTime !== String(session.startTime)) {
+                    // Server restarted, clear localStorage
+                    console.log('Server restarted - clearing local data');
+                    localStorage.removeItem('chat_token');
+                    localStorage.removeItem('chat_username');
+                    chatToken = null;
+                    chatUsername = null;
+                }
+                localStorage.setItem('server_start_time', session.startTime);
+                
+                if (chatToken && chatUsername) {
+                    showChatLoggedIn();
+                    loadChatMessages();
+                    setInterval(loadChatMessages, 2000);
+                } else {
+                    showChatLogin();
+                }
+            })
+            .catch(e => {
+                console.log('Session check failed:', e);
                 showChatLogin();
-            }
+            });
         }
 
         function showChatLogin() {

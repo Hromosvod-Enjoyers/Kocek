@@ -9,9 +9,15 @@ const ROOT = __dirname;
 const SECRET = 'hromosvody-secredsdsfsfsdt-chaos-kocky-vybuchy';
 const USERS_FILE = path.join(ROOT, 'users.json');
 const MESSAGES_FILE = path.join(ROOT, 'messages.json');
+const SESSION_FILE = path.join(ROOT, 'session.json');
 
-if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
-if (!fs.existsSync(MESSAGES_FILE)) fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
+// Clear data on server start
+const serverStartTime = Date.now();
+fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
+fs.writeFileSync(SESSION_FILE, JSON.stringify({ startTime: serverStartTime }));
+
+console.log('Server starting - all chat data cleared!');
 
 const readJSON = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const writeJSON = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
@@ -21,6 +27,12 @@ app.use(express.static(ROOT, { index: false }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
+});
+
+// Get server session info
+app.get('/api/chat/session', (_req, res) => {
+  const session = readJSON(SESSION_FILE);
+  res.json({ startTime: session.startTime });
 });
 
 app.post('/api/chat/register', (req, res) => {
