@@ -447,6 +447,7 @@
         function spawnCat() {
             let img = document.createElement('img');
             img.src = `https://cataas.com/cat?t=${Math.random()}`;
+            img.alt = 'Padající kočka';
             img.className = 'phys-obj';
             img.width = Math.random()*80+60;
             objects.push(new PhysObject(img, Math.random()*window.innerWidth, -150));
