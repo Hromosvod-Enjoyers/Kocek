@@ -86,22 +86,25 @@ const verifyToken = (req, res, next) => {
 };
 
 app.post('/api/chat/send', verifyToken, (req, res) => {
-  const { encryptedText } = req.body;
+  const { encryptedData } = req.body;
   
-  if (!encryptedText || encryptedText.length === 0) {
-    return res.status(400).json({ error: 'Encrypted message is required' });
+  if (!encryptedData || encryptedData.length === 0) {
+    return res.status(400).json({ error: 'Encrypted data is required' });
   }
   
   const messages = readJSON(MESSAGES_FILE);
   const message = {
     id: Date.now(),
     username: req.user.username,
-    encryptedText,
+    encryptedData,
     timestamp: new Date().toISOString()
   };
   
   messages.push(message);
   writeJSON(MESSAGES_FILE, messages);
+  
+  res.json({ ok: true, message });
+});
   
   res.json({ ok: true, message });
 });

@@ -571,9 +571,9 @@
             initChat();
         }
 
-        /* --- E2E ENCRYPTION SETUP --- */
+        /* --- E2E ENCRYPTION SETUP (RSA) --- */
         let keyPair = null;
-        let usersPublicKeys = {};
+        let usersPublicKeys = {}; // { username: publicKey }
 
         // Generate RSA key pair
         async function generateKeyPair() {
@@ -605,46 +605,72 @@
 
         // Import public key from base64
         async function importPublicKey(base64Key) {
-            const binaryString = atob(base64Key);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
+            try {
+                const binaryString = atob(base64Key);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                return await window.crypto.subtle.importKey(
+                    'spki',
+                    bytes.buffer,
+                    { name: "RSA-OAEP", hash: "SHA-256" },
+                    true,
+                    ["encrypt"]
+                );
+            } catch (e) {
+                console.error('Failed to import public key:', e);
+                return null;
             }
-            return await window.crypto.subtle.importKey(
-                'spki',
-                bytes.buffer,
-                { name: "RSA-OAEP", hash: "SHA-256" },
-                true,
-                ["encrypt"]
-            );
         }
 
-        // Encrypt message with public key
-        async function encryptMessage(text, publicKey) {
-            const encoded = new TextEncoder().encode(text);
-            const encrypted = await window.crypto.subtle.encrypt(
-                { name: "RSA-OAEP" },
-                publicKey,
-                encoded
-            );
-            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+        // Encrypt message for specific users
+        async function encryptMessageForUsers(text, targetUsernames) {
+            if (!keyPair) return null;
+            
+            try {
+                const encoded = new TextEncoder().encode(text);
+                const encrypted = {};
+                
+                // Encrypt for each target user
+                for (const username of targetUsernames) {
+                    if (usersPublicKeys[username]) {
+                        const encryptedData = await window.crypto.subtle.encrypt(
+                            { name: "RSA-OAEP" },
+                            usersPublicKeys[username],
+                            encoded
+                        );
+                        encrypted[username] = btoa(String.fromCharCode(...new Uint8Array(encryptedData)));
+                    }
+                }
+                
+                return encrypted;
+            } catch (e) {
+                console.error('Encryption failed:', e);
+                return null;
+            }
         }
 
         // Decrypt message with private key
         async function decryptMessage(encryptedBase64) {
+            if (!keyPair) return '[Nemáš klíč]';
+            
             try {
                 const binaryString = atob(encryptedBase64);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
+                
                 const decrypted = await window.crypto.subtle.decrypt(
                     { name: "RSA-OAEP" },
                     keyPair.privateKey,
                     bytes.buffer
                 );
+                
                 return new TextDecoder().decode(decrypted);
             } catch (e) {
+                console.error('Decryption failed:', e);
                 return '[Nelze dešifrovat]';
             }
         }
@@ -675,6 +701,7 @@
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
+                
                 const privateKey = await window.crypto.subtle.importKey(
                     'pkcs8',
                     bytes.buffer,
@@ -699,7 +726,10 @@
                 usersPublicKeys = {};
                 for (const user of users) {
                     if (user.publicKey) {
-                        usersPublicKeys[user.username] = await importPublicKey(user.publicKey);
+                        const imported = await importPublicKey(user.publicKey);
+                        if (imported) {
+                            usersPublicKeys[user.username] = imported;
+                        }
                     }
                 }
             } catch (e) {
@@ -769,8 +799,10 @@
             const username = document.getElementById('username-input').value.trim();
             if (!username) { alert('Username nemůže být prázdný!'); return; }
 
-            // Generate encryption keys
+            // Generate RSA key pair
             await generateKeyPair();
+            if (!keyPair) return;
+            
             const publicKey = await storeKeyPair();
 
             try {
@@ -837,8 +869,20 @@
             if (!text || !chatToken || !keyPair) return;
 
             try {
-                // Encrypt message with own public key (so we can decrypt it later)
-                const encryptedText = await encryptMessage(text, keyPair.publicKey);
+                // Get all other users
+                const otherUsers = Object.keys(usersPublicKeys).filter(u => u !== chatUsername);
+                
+                if (otherUsers.length === 0) {
+                    alert('Žádní další uživatelé v chatu!');
+                    return;
+                }
+                
+                // Encrypt for all users
+                const encryptedData = await encryptMessageForUsers(text, otherUsers);
+                if (!encryptedData) {
+                    alert('Chyba při šifrování!');
+                    return;
+                }
 
                 const response = await fetch('/api/chat/send', {
                     method: 'POST',
@@ -846,7 +890,7 @@
                         'Content-Type': 'application/json', 
                         'Authorization': `Bearer ${chatToken}` 
                     },
-                    body: JSON.stringify({ encryptedText })
+                    body: JSON.stringify({ encryptedData: JSON.stringify(encryptedData) })
                 });
                 
                 const result = await response.json();
