@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>⚡ 384.cz - TOTAL TRASH EDITION ⚡</title>
+    <style>
+
+        body {
+            background: #ff00ff;
+            background-image: repeating-linear-gradient(45deg, #f0f, #f0f 10px, #0ff 10px, #0ff 20px);
+            font-family: "Comic Sans MS", cursive;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" style="font-size:20px"><text y="15">⚡</text></svg>'), auto;
+        }
+
+
+        #content-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+
+
+        .container {
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; padding: 20px; padding-bottom: 150px;
+        }
+
+        .frame { 
+            border: 10px ridge #ff0000; background: #246; color: #fda; 
+            padding: 15px; width: 320px; box-shadow: 15px 15px 0px rgba(0,0,0,0.5);
+            margin-bottom: 20px; position: relative;
+            transition: transform 0.2s;
+        }
+        .frame:hover { transform: scale(1.02) rotate(1deg); z-index: 20; }
+        
+        .pigborder { border-color: #f90; border-style: double; }
+        .bluborder { border-color: #00f; border-style: dashed; }
+        
+        button { background: yellow; cursor: pointer; border: 4px outset white; margin: 5px; font-size: 16px; font-weight: bold; }
+        button:hover { background: red; color: white; border-style: inset; }
+        input, textarea { background: black; color: #0f0; border: 2px solid cyan; width: 90%; font-family: monospace; }
+
+        h2 { background: black; color: yellow; display: inline-block; padding: 5px; transform: skew(-10deg); }
+
+
+        .phys-obj {
+            position: absolute; z-index: 1000; cursor: grab; touch-action: none; will-change: transform, opacity;
+        }
+        .phys-obj.dragging { cursor: grabbing; filter: hue-rotate(90deg); z-index: 10000; }
+
+
+        .blink { animation: blinker 0.2s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+        
+        .runaway { position: absolute; transition: 0.1s; }
+
+
+        .paint-dot { position: absolute; width: 10px; height: 10px; border-radius: 50%; pointer-events: none; z-index: 5; }
+
+
+        #jumpscare-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            display: none; z-index: 99999999; background-size: cover; background-position: center;
+        }
+        .strobe-active { animation: strobe 0.05s infinite !important; }
+        @keyframes strobe { 0% { background-color: red; } 50% { background-color: white; } 100% { background-color: blue; } }
+
+
+        .console-box { height: 100px; overflow-y: scroll; background: #000; color: lime; font-size: 12px; border: 1px inset gray; text-align: left; }
+    </style>
+</head>
+<body onload="initAll()">
+
+    <div id="jumpscare-overlay"></div>
+
+    <div style="position: fixed; top: 0; width: 100%; background: blue; color: white; z-index: 5000; border-bottom: 5px solid lime; padding: 5px; display: flex; justify-content: space-between;">
+        <span>KOČEK: <b id="count">0</b></span>
+        <button onclick="explodeAll()">💣 VÝBUCH</button>
+        <button onclick="spawnCat()">🐱 +1 KOČKA</button>
+        <span>DRŽ <b>CTRL</b> A KRESLETE!</span>
+    </div>
+
+    <div id="content-layer">
+        <br><br><br>
+        <header style="background: black; padding: 20px; border: 10px dashed gold; text-align: center; transform: rotate(-1deg);">
+            <h1 class="blink" style="font-size: 50px; color: magenta; text-shadow: 3px 3px lime;">⚡ 384.cz CHAOS ⚡</h1>
+            <marquee style="font-size: 30px; color: white; background: red; font-weight: bold;">
+                VÍTEJTE V DIGITÁLNÍM SKLADIŠTI ⚡ KOČKY PROPADAJÍ DO PEKLA ⚡ KLIKNEŠ A NEVÍŠ ⚡
+            </marquee>
+        </header>
+
+        <div class="container">
+            
+            <div class="frame pigborder">
+                <h2>👮 CELNICE</h2>
+                <p>Máte něco k proclení?</p>
+                <button onclick="priznal()">ANO</button>
+                <button onclick="alert('POKUTA 384 KČ!'); priznal()">NE</button>
+            </div>
+
+            <div class="frame bluborder">
+                <h2>🔢 PRVOČÍSLA</h2>
+                <input type="number" id="cislo" placeholder="Zadej číslo...">
+                <button onclick="checkno()">ANALÝZA</button>
+            </div>
+
+            <div class="frame" style="height: 150px;">
+                <h2>🤖 PAST NA ROBOTY</h2>
+                <p>Klikni, pokud jsi člověk:</p>
+                <button id="runaway-btn" onmouseover="moveBtn(this)">JSEM ČLOVĚK</button>
+            </div>
+
+            <div class="frame" style="background: #100;">
+                <h3>🔥 KRB</h3>
+                <textarea id="krb" rows="4">MAGICKÝ OHEŇ MĚNÍ PÍSMENA...</textarea>
+                <button onclick="toggleKrb()">PŘILOŽIT</button>
+            </div>
+
+            <div class="frame pigborder">
+                <h2>🥐 ROHLÍKOMĚR</h2>
+                <p>Mzda vs Rohlík (3 Kč)</p>
+                <input id="money" type="number" placeholder="Tvoje výplata...">
+                <button onclick="calcRohlik()">SPOČÍTAT</button>
+                <h3 id="rohlik-res">0 ks</h3>
+            </div>
+
+            <div class="frame" style="background: black; border-color: lime;">
+                <h3>💻 HACKER ZONE</h3>
+                <div id="terminal" class="console-box">System booting...<br></div>
+            </div>
+
+            <div class="frame bluborder">
+                <h3>💬 FAKE CHAT</h3>
+                <div id="chat" class="console-box" style="background: white; color: black;"></div>
+            </div>
+
+            <div class="frame" style="background: darkred;">
+                <h2 class="blink">⚠️ VIRUS ZDARMA</h2>
+                <p>Stahování: <span id="virus-pct">0%</span></p>
+                <div style="width: 100%; background: black; height: 20px;">
+                    <div id="virus-bar" style="width: 0%; background: lime; height: 100%;"></div>
+                </div>
+                <button onclick="startVirus()">STÁHNOUT</button>
+            </div>
+
+            <div class="frame">
+                <h2>🍪 COOKIES</h2>
+                <p>Souhlasíte se vším?</p>
+                <div id="cookie-area">
+                    <button onclick="cloneMe(this)">SOUHLASÍM</button>
+                </div>
+            </div>
+
+            <div class="frame pigborder">
+                <h2>📱 PHONE NUKE</h2>
+                <button onclick="nuke()">ODPÁLIT MOBIL</button>
+            </div>
+
+            <div style="width: 100%; text-align: center; color: white; background: black; padding: 20px;">
+                Tady je konec stránky. Kočky padají dál. <br> 384 FOREVER.
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const gravity = 0.5;
+        const friction = 0.99;
+        const bounce = 0.6;
+        let objects = [];
+        let draggedObj = null;
+        let lastX=0, lastY=0, vX=0, vY=0;
+
+        class PhysObject {
+            constructor(el, x, y) {
+                this.el = el;
+                this.x = x; this.y = y;
+                this.vx = (Math.random()-0.5)*15; this.vy = (Math.random()-0.5)*15;
+                this.w = 100; this.h = 100;
+                this.ang = 0; this.vAng = (Math.random()-0.5);
+                this.groundTime = 0;
+                this.dragging = false;
+                
+                document.body.appendChild(this.el);
+                this.el.addEventListener('mousedown', (e) => startDrag(e, this));
+                this.el.onload = () => { this.w = this.el.width; this.h = this.el.height; }
+            }
+            update() {
+                if(this.dragging) {
+                    this.vx=0; this.vy=0; this.groundTime=0; this.el.style.opacity=1; return;
+                }
+                
+                this.vy += gravity;
+                this.x += this.vx; this.y += this.vy; this.ang += this.vAng;
+
+
+                if(this.x < 0) { this.x=0; this.vx *= -bounce; }
+                if(this.x+this.w > window.innerWidth) { this.x=window.innerWidth-this.w; this.vx *= -bounce; }
+
+
+                if(this.y+this.h > window.innerHeight) {
+                    if(this.groundTime < 100) {
+                        this.y = window.innerHeight-this.h;
+                        this.vy *= -bounce;
+                        this.vx *= 0.8;
+                        this.groundTime++;
+                        this.el.style.opacity = 1 - (this.groundTime/100);
+                        this.el.style.filter = `hue-rotate(${this.groundTime*2}deg)`;
+                    } else {
+                    }
+                } else {
+                    if(this.groundTime < 100) { this.groundTime=0; this.el.style.opacity=1; }
+                }
+
+
+                if(this.y > window.innerHeight + 200) {
+                    this.y = -200; this.x = Math.random()*(window.innerWidth-100);
+                    this.vx=0; this.vy=0; this.groundTime=0;
+                    this.el.style.opacity=1; this.el.style.filter="none";
+                }
+
+                this.el.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.ang}deg)`;
+            }
+        }
+
+        function physLoop() {
+            objects.forEach(o => o.update());
+            requestAnimationFrame(physLoop);
+        }
+
+        function startDrag(e, o) { 
+            e.preventDefault(); 
+            draggedObj=o; 
+            o.dragging=true; 
+            o.el.classList.add('dragging');
+            o.offX = e.clientX-o.x; 
+            o.offY=e.clientY-o.y; 
+        }
+        document.addEventListener('mousemove', e => {
+            vX = e.clientX-lastX; 
+            vY = e.clientY-lastY;
+            
+            if(draggedObj) { 
+                draggedObj.x = e.clientX-draggedObj.offX; 
+                draggedObj.y = e.clientY-draggedObj.offY;
+                draggedObj.el.style.transform = `translate(${draggedObj.x}px, ${draggedObj.y}px) rotate(${draggedObj.ang}deg)`;
+            }
+            lastX=e.clientX; 
+            lastY=e.clientY;
+            if(e.ctrlKey) drawDot(e.clientX, e.clientY);
+        });
+        document.addEventListener('mouseup', () => {
+            if(draggedObj) { 
+                draggedObj.vx=vX*1.5; 
+                draggedObj.vy=vY*1.5; 
+                draggedObj.dragging=false; 
+                draggedObj.el.classList.remove('dragging');
+                draggedObj=null; 
+            }
+        });
+
+        function spawnCat() {
+            let img = document.createElement('img');
+            img.src = `https://cataas.com/cat?t=${Math.random()}`;
+            img.className = 'phys-obj';
+            img.width = Math.random()*80+60;
+            objects.push(new PhysObject(img, Math.random()*window.innerWidth, -150));
+            document.getElementById('count').innerText = objects.length;
+        }
+
+        function explodeAll() {
+            objects.forEach(o => { o.vy = -30; o.vx = (Math.random()-0.5)*50; o.groundTime=0; o.el.style.opacity=1; });
+        }
+
+
+        
+
+        function priznal() { alert("Zaplať 384 zlatých!"); spawnEmoji('💰'); }
+        
+
+        const isPrime = n => {
+            if(n<2) return false;
+            for(let i=2; i*i<=n; i++) if(n%i===0) return false;
+            return true;
+        }
+        function checkno() { 
+            let v = document.getElementById('cislo').value;
+            alert(v + (isPrime(v) ? " JE PRVOČÍSLO! ⚡" : " JE SLOŽENÉ! 💩"));
+            if(isPrime(v)) spawnEmoji('🔢');
+        }
+
+
+        function moveBtn(btn) {
+            btn.style.position = 'absolute';
+            btn.style.top = Math.random()*100 + 'px';
+            btn.style.left = Math.random()*200 + 'px';
+        }
+
+
+        let krbInt;
+        function toggleKrb() {
+            if(krbInt) { clearInterval(krbInt); krbInt=null; }
+            else { 
+                krbInt = setInterval(() => {
+                    let k = document.getElementById('krb');
+                    k.style.color = `hsl(${Math.random()*50}, 100%, 50%)`;
+                    k.value = k.value.split('').map(c => Math.random()>0.9 ? String.fromCharCode(c.charCodeAt(0)+1) : c).join('');
+                }, 100);
+            }
+        }
+
+
+        function calcRohlik() {
+            let m = document.getElementById('money').value;
+            document.getElementById('rohlik-res').innerText = Math.floor(m/3) + " Rohlíků";
+            spawnEmoji('🥐');
+        }
+
+
+        function nuke() {
+            document.body.style.filter = "invert(1) contrast(5)";
+            setTimeout(() => document.body.style.filter = "none", 500);
+            alert("⚠️ SYSTEM FAILURE 384 ⚠️");
+        }
+
+
+        function cloneMe(btn) {
+            let clone = btn.cloneNode(true);
+            clone.style.position = 'absolute';
+            clone.style.left = Math.random()*200+'px';
+            clone.style.top = Math.random()*200+'px';
+            document.getElementById('cookie-area').appendChild(clone);
+        }
+
+
+        function drawDot(x, y) {
+            let d = document.createElement('div');
+            d.className = 'paint-dot';
+            d.style.left = x+'px'; d.style.top = y+'px';
+            d.style.background = `hsl(${Math.random()*360}, 100%, 50%)`;
+            document.body.appendChild(d);
+
+            setTimeout(() => d.remove(), 5000);
+        }
+
+
+        function startVirus() {
+            let w = 0;
+            let bar = document.getElementById('virus-bar');
+            let pct = document.getElementById('virus-pct');
+            let i = setInterval(() => {
+                w += Math.random()*5;
+                if(w>100) { w=100; clearInterval(i); alert("VIRUS ÚSPĚŠNĚ NAINSTALOVÁN!"); spawnCat(); }
+                bar.style.width = w+'%';
+                pct.innerText = Math.floor(w)+'%';
+            }, 100);
+        }
+
+
+        function autoStuff() {
+
+            setInterval(() => {
+                let t = document.getElementById('terminal');
+                let lines = ["Hacking NSA...", "Downloading cats...", "rm -rf /", "384 logic loaded", "Error 404"];
+                t.innerHTML += lines[Math.floor(Math.random()*lines.length)] + "<br>";
+                t.scrollTop = t.scrollHeight;
+            }, 500);
+
+
+            setInterval(() => {
+                let c = document.getElementById('chat');
+                let msgs = ["Mňau", "Kde je 384?", "Lol", "Admin je bůh", "Klikni na to!"];
+                c.innerHTML += `<b style="color:blue">User${Math.floor(Math.random()*99)}:</b> ${msgs[Math.floor(Math.random()*msgs.length)]}<br>`;
+                c.scrollTop = c.scrollHeight;
+            }, 1500);
+
+
+            scheduleJumpscare();
+        }
+
+        function scheduleJumpscare() { setTimeout(doJumpscare, Math.random()*30000+30000); }
+        function doJumpscare() {
+            let o = document.getElementById('jumpscare-overlay');
+            o.style.backgroundImage = `url('https://cataas.com/cat/angry?t=${Date.now()}')`;
+            o.style.display='block'; o.className='strobe-active';
+            setTimeout(() => { o.style.display='none'; o.className=''; scheduleJumpscare(); }, 2000);
+        }
+
+        function spawnEmoji(char) {
+            let d = document.createElement('div');
+            d.innerText = char; d.className = 'phys-obj';
+            d.style.fontSize = '40px';
+            objects.push(new PhysObject(d, Math.random()*window.innerWidth, -100));
+        }
+
+
+        function initAll() {
+            physLoop();
+            autoStuff();
+            for(let i=0; i<5; i++) setTimeout(spawnCat, i*300);
+            setInterval(spawnCat, 2500);
+        }
+    </script>
+</body>
+</html>
