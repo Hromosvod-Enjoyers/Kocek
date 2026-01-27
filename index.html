@@ -712,9 +712,22 @@
             .then(r => r.json())
             .then(messages => {
                 const box = document.getElementById('chat-messages');
-                box.innerHTML = messages.map(m => 
-                    `<div class="chat-message"><span class="chat-message-user">${m.username}</span>: ${m.text}</div>`
-                ).join('');
+                box.innerHTML = '';
+                
+                messages.forEach(m => {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = 'chat-message';
+                    
+                    const userSpan = document.createElement('span');
+                    userSpan.className = 'chat-message-user';
+                    userSpan.textContent = m.username;
+                    
+                    msgDiv.appendChild(userSpan);
+                    msgDiv.appendChild(document.createTextNode(': ' + m.text));
+                    
+                    box.appendChild(msgDiv);
+                });
+                
                 box.scrollTop = box.scrollHeight;
             })
             .catch(e => console.log('Chat load error:', e));
