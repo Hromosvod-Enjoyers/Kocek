@@ -36,10 +36,14 @@ app.get('/api/chat/session', (_req, res) => {
 });
 
 app.post('/api/chat/register', (req, res) => {
-  const { username } = req.body;
+  const { username, publicKey } = req.body;
   
   if (!username || username.length < 2 || username.length > 20) {
     return res.status(400).json({ error: 'Username musí mít 2-20 znaků' });
+  }
+  
+  if (!publicKey) {
+    return res.status(400).json({ error: 'Public key is required' });
   }
   
   const users = readJSON(USERS_FILE);
@@ -49,7 +53,7 @@ app.post('/api/chat/register', (req, res) => {
     return res.status(409).json({ error: 'Username je již zabraný' });
   }
 
-  const user = { username, createdAt: new Date().toISOString() };
+  const user = { username, publicKey, createdAt: new Date().toISOString() };
   users.push(user);
   writeJSON(USERS_FILE, users);
   
@@ -82,17 +86,17 @@ const verifyToken = (req, res, next) => {
 };
 
 app.post('/api/chat/send', verifyToken, (req, res) => {
-  const { text } = req.body;
+  const { encryptedText } = req.body;
   
-  if (!text || text.length === 0 || text.length > 500) {
-    return res.status(400).json({ error: 'Message must be 1-500 chars' });
+  if (!encryptedText || encryptedText.length === 0) {
+    return res.status(400).json({ error: 'Encrypted message is required' });
   }
   
   const messages = readJSON(MESSAGES_FILE);
   const message = {
     id: Date.now(),
     username: req.user.username,
-    text,
+    encryptedText,
     timestamp: new Date().toISOString()
   };
   
@@ -109,7 +113,7 @@ app.get('/api/chat/messages', (req, res) => {
 
 app.get('/api/chat/users', (req, res) => {
   const users = readJSON(USERS_FILE);
-  res.json(users.map(u => u.username));
+  res.json(users.map(u => ({ username: u.username, publicKey: u.publicKey })));
 });
 
 app.use((_req, res) => {
