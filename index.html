@@ -190,9 +190,134 @@
 
 
         .console-box { height: 100px; overflow-y: scroll; background: #000; color: lime; font-size: 12px; border: 1px inset gray; text-align: left; }
+
+        #chat-popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            background: black;
+            border: 3px solid cyan;
+            z-index: 9999999;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px cyan;
+            font-family: monospace;
+        }
+
+        #chat-header {
+            background: cyan;
+            color: black;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #chat-close {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        #chat-login {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        #chat-login input {
+            background: black;
+            color: lime;
+            border: 2px solid lime;
+            padding: 5px;
+            font-family: monospace;
+        }
+
+        #chat-login button {
+            background: lime;
+            color: black;
+            border: 2px solid lime;
+            padding: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border-bottom: 2px solid cyan;
+            font-size: 12px;
+            color: lime;
+        }
+
+        .chat-message {
+            margin: 5px 0;
+            word-wrap: break-word;
+        }
+
+        .chat-message-user {
+            color: yellow;
+            font-weight: bold;
+        }
+
+        #chat-input-area {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+        }
+
+        #chat-input-area input {
+            flex: 1;
+            background: black;
+            color: lime;
+            border: 2px solid lime;
+            padding: 5px;
+            font-family: monospace;
+        }
+
+        #chat-input-area button {
+            background: lime;
+            color: black;
+            border: 2px solid lime;
+            padding: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            min-width: 50px;
+        }
+
+        .chat-username-info {
+            color: cyan;
+            font-size: 11px;
+            padding: 5px;
+            border-bottom: 1px solid cyan;
+        }
     </style>
 </head>
 <body onload="initAll()">
+
+    <div id="jumpscare-overlay"></div>
+
+    <div id="chat-popup">
+        <div id="chat-header">
+            💬 LIVE CHAT
+            <span id="chat-close" onclick="toggleChat()">✕</span>
+        </div>
+        <div id="chat-login" style="display: none;">
+            <input type="text" id="username-input" placeholder="Zadej username..." maxlength="20">
+            <button onclick="loginChat()">LOGIN</button>
+        </div>
+        <div class="chat-username-info" id="chat-username-info" style="display: none;"></div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-area" style="display: none;">
+            <input type="text" id="chat-msg-input" placeholder="Zpráva..." maxlength="500">
+            <button onclick="sendChatMessage()">SEND</button>
+        </div>
+    </div>
 
     <div id="jumpscare-overlay"></div>
 
@@ -522,7 +647,110 @@
             autoStuff();
             for(let i=0; i<5; i++) setTimeout(spawnCat, i*300);
             setInterval(spawnCat, 2500);
+            initChat();
         }
+
+        /* --- REAL CHAT --- */
+        let chatToken = localStorage.getItem('chat_token');
+        let chatUsername = localStorage.getItem('chat_username');
+
+        function initChat() {
+            if (chatToken && chatUsername) {
+                showChatLoggedIn();
+                loadChatMessages();
+                setInterval(loadChatMessages, 2000);
+            } else {
+                showChatLogin();
+            }
+        }
+
+        function showChatLogin() {
+            document.getElementById('chat-login').style.display = 'flex';
+            document.getElementById('chat-messages').innerHTML = '<div style="color: cyan; padding: 10px; text-align: center;">Přihlaš se abys chatoval!</div>';
+            document.getElementById('chat-input-area').style.display = 'none';
+            document.getElementById('chat-username-info').style.display = 'none';
+        }
+
+        function showChatLoggedIn() {
+            document.getElementById('chat-login').style.display = 'none';
+            document.getElementById('chat-input-area').style.display = 'flex';
+            document.getElementById('chat-username-info').style.display = 'block';
+            document.getElementById('chat-username-info').innerText = `👤 ${chatUsername}`;
+        }
+
+        function loginChat() {
+            const username = document.getElementById('username-input').value.trim();
+            if (!username) {
+                alert('Username nemůže být prázdný!');
+                return;
+            }
+
+            fetch('/api/chat/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Chyba: ' + data.error);
+                    return;
+                }
+                localStorage.setItem('chat_token', data.token);
+                localStorage.setItem('chat_username', data.username);
+                chatToken = data.token;
+                chatUsername = data.username;
+                showChatLoggedIn();
+                loadChatMessages();
+                setInterval(loadChatMessages, 2000);
+            })
+            .catch(e => alert('Chyba: ' + e));
+        }
+
+        function loadChatMessages() {
+            fetch('/api/chat/messages')
+            .then(r => r.json())
+            .then(messages => {
+                const box = document.getElementById('chat-messages');
+                box.innerHTML = messages.map(m => 
+                    `<div class="chat-message"><span class="chat-message-user">${m.username}</span>: ${m.text}</div>`
+                ).join('');
+                box.scrollTop = box.scrollHeight;
+            })
+            .catch(e => console.log('Chat load error:', e));
+        }
+
+        function sendChatMessage() {
+            const text = document.getElementById('chat-msg-input').value.trim();
+            if (!text || !chatToken) return;
+
+            fetch('/api/chat/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${chatToken}`
+                },
+                body: JSON.stringify({ text })
+            })
+            .then(r => r.json())
+            .then(() => {
+                document.getElementById('chat-msg-input').value = '';
+                loadChatMessages();
+            })
+            .catch(e => console.log('Send error:', e));
+        }
+
+        function toggleChat() {
+            const popup = document.getElementById('chat-popup');
+            popup.style.display = popup.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        // Allow Enter to send
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && document.activeElement.id === 'chat-msg-input') {
+                sendChatMessage();
+            }
+        });
     </script>
 </body>
 </html>

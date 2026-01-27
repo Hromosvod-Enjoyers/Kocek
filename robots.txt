@@ -5,7 +5,6 @@ Disallow:
 
 Sitemap: https://hromosvody.club/sitemap.xml
 
-# Specifické instrukce pro různé boty
 User-agent: Googlebot
 Allow: /
 
@@ -15,6 +14,5 @@ Allow: /
 User-agent: Slurp
 Allow: /
 
-# Zpoždění pro agresivní crawlery
 User-agent: *
 Crawl-delay: 1
