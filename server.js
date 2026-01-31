@@ -55,6 +55,31 @@ const getClientIp = (req) => {
          'unknown';
 };
 
+// Rate limiting store: { ip: [timestamp1, timestamp2, ...] }
+const rateLimitStore = {};
+
+// Rate limiting middleware
+const rateLimit = (maxRequests = 10, windowMs = 60000) => {
+  return (req, res, next) => {
+    const ip = getClientIp(req);
+    const now = Date.now();
+    
+    if (!rateLimitStore[ip]) {
+      rateLimitStore[ip] = [];
+    }
+    
+    // Remove old requests outside the time window
+    rateLimitStore[ip] = rateLimitStore[ip].filter(time => now - time < windowMs);
+    
+    if (rateLimitStore[ip].length >= maxRequests) {
+      return res.status(429).json({ error: 'Příliš mnoho requestů. Zkuste později.' });
+    }
+    
+    rateLimitStore[ip].push(now);
+    next();
+  };
+};
+
 app.use(express.json());
 app.use(express.static(ROOT, { index: false }));
 
@@ -68,7 +93,7 @@ app.get('/api/chat/session', (_req, res) => {
   res.json({ startTime: session.startTime });
 });
 
-app.post('/api/chat/register', (req, res) => {
+app.post('/api/chat/register', rateLimit(5, 60000), (req, res) => {
   const { username } = req.body;
   const clientIp = getClientIp(req);
   
@@ -118,7 +143,7 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-app.post('/api/chat/send', verifyToken, (req, res) => {
+app.post('/api/chat/send', verifyToken, rateLimit(30, 60000), (req, res) => {
   const { encryptedText } = req.body;
   const clientIp = getClientIp(req);
   
