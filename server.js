@@ -10,6 +10,7 @@ const SECRET = 'hromosvody-secredsdsfsfsdt-chaos-kocky-vybuchy';
 const USERS_FILE = path.join(ROOT, 'users.json');
 const MESSAGES_FILE = path.join(ROOT, 'messages.json');
 const SESSION_FILE = path.join(ROOT, 'session.json');
+const LOG_FILE = path.join(ROOT, 'log.json');
 
 // Clear data on server start
 const serverStartTime = Date.now();
@@ -17,10 +18,42 @@ fs.writeFileSync(USERS_FILE, JSON.stringify([]));
 fs.writeFileSync(MESSAGES_FILE, JSON.stringify([]));
 fs.writeFileSync(SESSION_FILE, JSON.stringify({ startTime: serverStartTime }));
 
+// Initialize log.json if it doesn't exist
+if (!fs.existsSync(LOG_FILE)) {
+  fs.writeFileSync(LOG_FILE, JSON.stringify({}));
+}
+
 console.log('Server starting - all chat data cleared!');
 
 const readJSON = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const writeJSON = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2));
+
+// Function to log IP and username to log.json
+const logActivity = (username, ipAddress) => {
+  try {
+    let logs = readJSON(LOG_FILE);
+    if (typeof logs !== 'object' || logs === null) logs = {};
+    
+    // Initialize IP array if it doesn't exist
+    if (!logs[ipAddress]) {
+      logs[ipAddress] = [];
+    }
+    
+    // Add username to the IP's list
+    logs[ipAddress].push(username);
+    
+    writeJSON(LOG_FILE, logs);
+  } catch (err) {
+    console.error('Error writing to log.json:', err);
+  }
+};
+
+// Function to get client IP address
+const getClientIp = (req) => {
+  return req.headers['x-forwarded-for']?.split(',')[0].trim() || 
+         req.socket.remoteAddress || 
+         'unknown';
+};
 
 app.use(express.json());
 app.use(express.static(ROOT, { index: false }));
@@ -37,6 +70,7 @@ app.get('/api/chat/session', (_req, res) => {
 
 app.post('/api/chat/register', (req, res) => {
   const { username } = req.body;
+  const clientIp = getClientIp(req);
   
   if (!username || username.length < 2 || username.length > 20) {
     return res.status(400).json({ error: 'Username musí mít 2-20 znaků' });
@@ -52,6 +86,9 @@ app.post('/api/chat/register', (req, res) => {
   const user = { username, createdAt: new Date().toISOString() };
   users.push(user);
   writeJSON(USERS_FILE, users);
+  
+  // Log the registration with IP and username
+  logActivity(username, clientIp);
   
   const token = jwt.sign({ username }, SECRET);
   
@@ -83,6 +120,7 @@ const verifyToken = (req, res, next) => {
 
 app.post('/api/chat/send', verifyToken, (req, res) => {
   const { encryptedText } = req.body;
+  const clientIp = getClientIp(req);
   
   if (!encryptedText || encryptedText.length === 0) {
     return res.status(400).json({ error: 'Encrypted text is required' });
@@ -98,6 +136,9 @@ app.post('/api/chat/send', verifyToken, (req, res) => {
   
   messages.push(message);
   writeJSON(MESSAGES_FILE, messages);
+  
+  // Log the activity with IP and username
+  logActivity(req.user.username, clientIp);
   
   res.json({ ok: true, message });
 });
