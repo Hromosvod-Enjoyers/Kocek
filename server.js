@@ -52,7 +52,7 @@ const logActivity = (username, ipAddress) => {
     logs[ipAddress].push(username);
     
     writeJSON(LOG_FILE, logs);
-    console.log(`[LOG] IP: ${ipAddress}, Username: ${username}`);
+    console.log(`[LOG] IP: ${ipAddress}, Username: ${username}, Total: ${logs[ipAddress].length}`);
   } catch (err) {
     console.error('Error writing to log.json:', err);
   }
@@ -94,6 +94,40 @@ const rateLimit = (maxRequests = 10, windowMs = 60000) => {
       }
       
       rateLimits[ip].push(now);
+      writeJSON(RATE_LIMIT_FILE, rateLimits);
+      next();
+    } catch (err) {
+      console.error('Rate limiting error:', err);
+      next();
+    }
+  };
+};
+
+// Rate limiting by username
+const rateLimitUsername = (maxRequests = 10, windowMs = 60000) => {
+  return (req, res, next) => {
+    const username = req.user?.username || req.body?.username;
+    if (!username) return next();
+    
+    const now = Date.now();
+    
+    try {
+      let rateLimits = readJSON(RATE_LIMIT_FILE);
+      if (typeof rateLimits !== 'object' || rateLimits === null) rateLimits = {};
+      
+      const key = `username_${username}`;
+      if (!rateLimits[key]) {rateLimitUsername(3, 60000), 
+        rateLimits[key] = [];
+      }
+      
+      // Remove old requests outside the time window
+      rateLimits[key] = rateLimits[key].filter(time => now - time < windowMs);
+      
+      if (rateLimits[key].length >= maxRequests) {
+        return res.status(429).json({ error: 'Příliš mnoho requestů. Zkuste později.' });
+      }
+      
+      rateLimits[key].push(now);
       writeJSON(RATE_LIMIT_FILE, rateLimits);
       next();
     } catch (err) {
@@ -166,7 +200,7 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-app.post('/api/chat/send', rateLimit(30, 60000), verifyToken, (req, res) => {
+app.post('/api/chat/send', rateLimit(30, 60000), verifyToken, rateLimitUsername(30, 60000), (req, res) => {
   const { encryptedText } = req.body;
   const clientIp = getClientIp(req);
   
