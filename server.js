@@ -43,6 +43,7 @@ const logActivity = (username, ipAddress) => {
     logs[ipAddress].push(username);
     
     writeJSON(LOG_FILE, logs);
+    console.log(`[LOG] IP: ${ipAddress}, Username: ${username}`);
   } catch (err) {
     console.error('Error writing to log.json:', err);
   }
@@ -143,7 +144,7 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-app.post('/api/chat/send', verifyToken, rateLimit(30, 60000), (req, res) => {
+app.post('/api/chat/send', rateLimit(30, 60000), verifyToken, (req, res) => {
   const { encryptedText } = req.body;
   const clientIp = getClientIp(req);
   
