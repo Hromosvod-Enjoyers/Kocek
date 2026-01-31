@@ -11,6 +11,10 @@ const USERS_FILE = path.join(ROOT, 'users.json');
 const MESSAGES_FILE = path.join(ROOT, 'messages.json');
 const SESSION_FILE = path.join(ROOT, 'session.json');
 const LOG_FILE = path.join(ROOT, 'log.json');
+const RATE_LIMIT_FILE = path.join(ROOT, 'rate_limit.json');
+
+// Trust proxy (for Cloudflare and other proxies)
+app.set('trust proxy', 1);
 
 // Clear data on server start
 const serverStartTime = Date.now();
@@ -21,6 +25,11 @@ fs.writeFileSync(SESSION_FILE, JSON.stringify({ startTime: serverStartTime }));
 // Initialize log.json if it doesn't exist
 if (!fs.existsSync(LOG_FILE)) {
   fs.writeFileSync(LOG_FILE, JSON.stringify({}));
+}
+
+// Initialize rate_limit.json if it doesn't exist
+if (!fs.existsSync(RATE_LIMIT_FILE)) {
+  fs.writeFileSync(RATE_LIMIT_FILE, JSON.stringify({}));
 }
 
 console.log('Server starting - all chat data cleared!');
@@ -51,13 +60,17 @@ const logActivity = (username, ipAddress) => {
 
 // Function to get client IP address
 const getClientIp = (req) => {
-  return req.headers['x-forwarded-for']?.split(',')[0].trim() || 
-         req.socket.remoteAddress || 
-         'unknown';
+  // Check Cloudflare header first
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (cfIp) return cfIp;
+  
+  // Check X-Forwarded-For header
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
+  
+  // Fallback to socket address
+  return req.socket.remoteAddress || 'unknown';
 };
-
-// Rate limiting store: { ip: [timestamp1, timestamp2, ...] }
-const rateLimitStore = {};
 
 // Rate limiting middleware
 const rateLimit = (maxRequests = 10, windowMs = 60000) => {
@@ -65,19 +78,28 @@ const rateLimit = (maxRequests = 10, windowMs = 60000) => {
     const ip = getClientIp(req);
     const now = Date.now();
     
-    if (!rateLimitStore[ip]) {
-      rateLimitStore[ip] = [];
+    try {
+      let rateLimits = readJSON(RATE_LIMIT_FILE);
+      if (typeof rateLimits !== 'object' || rateLimits === null) rateLimits = {};
+      
+      if (!rateLimits[ip]) {
+        rateLimits[ip] = [];
+      }
+      
+      // Remove old requests outside the time window
+      rateLimits[ip] = rateLimits[ip].filter(time => now - time < windowMs);
+      
+      if (rateLimits[ip].length >= maxRequests) {
+        return res.status(429).json({ error: 'Příliš mnoho requestů. Zkuste později.' });
+      }
+      
+      rateLimits[ip].push(now);
+      writeJSON(RATE_LIMIT_FILE, rateLimits);
+      next();
+    } catch (err) {
+      console.error('Rate limiting error:', err);
+      next();
     }
-    
-    // Remove old requests outside the time window
-    rateLimitStore[ip] = rateLimitStore[ip].filter(time => now - time < windowMs);
-    
-    if (rateLimitStore[ip].length >= maxRequests) {
-      return res.status(429).json({ error: 'Příliš mnoho requestů. Zkuste později.' });
-    }
-    
-    rateLimitStore[ip].push(now);
-    next();
   };
 };
 
