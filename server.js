@@ -116,7 +116,7 @@ const rateLimitUsername = (maxRequests = 10, windowMs = 60000) => {
       if (typeof rateLimits !== 'object' || rateLimits === null) rateLimits = {};
       
       const key = `username_${username}`;
-      if (!rateLimits[key]) {rateLimitUsername(3, 60000), 
+      if (!rateLimits[key]) {
         rateLimits[key] = [];
       }
       
@@ -150,7 +150,7 @@ app.get('/api/chat/session', (_req, res) => {
   res.json({ startTime: session.startTime });
 });
 
-app.post('/api/chat/register', rateLimit(5, 60000), (req, res) => {
+app.post('/api/chat/register', rateLimit(5, 60000), rateLimitUsername(3, 60000), (req, res) => {
   const { username } = req.body;
   const clientIp = getClientIp(req);
   
