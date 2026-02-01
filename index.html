@@ -359,6 +359,12 @@
         let objects = [];
         let draggedObj = null;
         let lastX=0, lastY=0, vX=0, vY=0;
+        
+        // Window movement tracking
+        let lastWindowX = window.screenX;
+        let lastWindowY = window.screenY;
+        let windowVelocityX = 0;
+        let windowVelocityY = 0;
 
         class PhysObject {
             constructor(el, x, y) {
@@ -378,6 +384,10 @@
                 if(this.dragging) {
                     this.vx=0; this.vy=0; this.groundTime=0; this.el.style.opacity=1; return;
                 }
+                
+                // Apply window movement momentum
+                this.vx += windowVelocityX * 0.5;
+                this.vy += windowVelocityY * 0.5;
                 
                 this.vy += gravity;
                 this.x += this.vx; this.y += this.vy; this.ang += this.vAng;
@@ -411,6 +421,24 @@
         function physLoop() {
             objects.forEach(o => o.update());
             requestAnimationFrame(physLoop);
+        }
+        
+        // Track window movement for physics effects
+        function trackWindowMovement() {
+            const currentX = window.screenX;
+            const currentY = window.screenY;
+            
+            windowVelocityX = (lastWindowX - currentX) * 0.3;
+            windowVelocityY = (lastWindowY - currentY) * 0.3;
+            
+            lastWindowX = currentX;
+            lastWindowY = currentY;
+            
+            // Dampen window velocity over time
+            windowVelocityX *= 0.9;
+            windowVelocityY *= 0.9;
+            
+            requestAnimationFrame(trackWindowMovement);
         }
 
         function startDrag(e, o) { 
@@ -565,6 +593,7 @@
 
         function initAll() {
             physLoop();
+            trackWindowMovement(); // Start tracking window movement
             autoStuff();
             for(let i=0; i<5; i++) setTimeout(spawnCat, i*300);
             setInterval(spawnCat, 2500);
