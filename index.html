@@ -192,11 +192,16 @@
         .chat-message-user { color: yellow; font-weight: bold; }
         #chat-input-area { display: flex; gap: 5px; padding: 10px; }
         .chat-username-info { color: cyan; font-size: 11px; padding: 5px; border-bottom: 1px solid cyan; }
+        #chat-open-btn { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: cyan; border: 3px solid lime; border-radius: 50%; font-size: 30px; cursor: pointer; z-index: 9999998; box-shadow: 0 0 20px cyan; display: none; align-items: center; justify-content: center; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        #chat-open-btn:hover { background: lime; border-color: cyan; transform: scale(1.2) !important; }
     </style>
 </head>
 <body onload="initAll()">
 
     <div id="jumpscare-overlay"></div>
+
+    <div id="chat-open-btn" onclick="toggleChat()">💬</div>
 
     <div id="chat-popup">
         <div id="chat-header">
@@ -827,7 +832,14 @@
 
         function toggleChat() {
             const popup = document.getElementById('chat-popup');
-            popup.style.display = popup.style.display === 'none' ? 'flex' : 'none';
+            const openBtn = document.getElementById('chat-open-btn');
+            if (popup.style.display === 'none') {
+                popup.style.display = 'flex';
+                openBtn.style.display = 'none';
+            } else {
+                popup.style.display = 'none';
+                openBtn.style.display = 'flex';
+            }
         }
 
         document.addEventListener('keypress', (e) => {
